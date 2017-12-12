@@ -107,7 +107,7 @@ module.exports = function (RED) {
           }
 
           /* HTTP requests for boolean and multiple data string [1,2,3,4,5] */
-          if (typeof msg.payload.value === 'string') {
+          if (msg.payload.hasOwnProperty('value') && typeof msg.payload.value === 'string') {
             if (msg.payload.value === 'true' || msg.payload.value === 'false') {
               msg.payload.value = (msg.payload.value === 'true')
             } else {
@@ -156,7 +156,7 @@ module.exports = function (RED) {
     }
 
     node.onModbusWriteError = function (err, msg) {
-      setModbusError(err, msg)
+      setModbusError(err, mbCore.getOriginalMessage(node.bufferMessageList, msg) || msg)
     }
 
     node.on('close', function () {
@@ -170,14 +170,7 @@ module.exports = function (RED) {
     }
 
     function buildMessage (values, response, msg) {
-      let origMsg = node.bufferMessageList.get(msg.payload.messageId) || {}
-      if (origMsg.payload.messageId) {
-        node.bufferMessageList.delete(origMsg.payload.messageId)
-        internalDebugLog('Remove Message ' + msg.payload.messageId)
-      } else {
-        internalDebugLog('Message Not Found ' + msg.payload.messageId)
-      }
-
+      let origMsg = mbCore.getOriginalMessage(node.bufferMessageList, msg) || msg
       origMsg.payload = values
       origMsg.responseBuffer = response
       origMsg.input = msg
